@@ -43,6 +43,30 @@
   </entry>
   
   <entry>
+    <title>MySQL字段类型注意点</title>
+    <link href="https://cloudbillow.cn/2024/01/22/2024-01-22-MySQL%E5%AD%97%E6%AE%B5%E7%B1%BB%E5%9E%8B%E6%B3%A8%E6%84%8F%E7%82%B9/"/>
+    <id>https://cloudbillow.cn/2024/01/22/2024-01-22-MySQL%E5%AD%97%E6%AE%B5%E7%B1%BB%E5%9E%8B%E6%B3%A8%E6%84%8F%E7%82%B9/</id>
+    <published>2024-01-22T02:32:23.000Z</published>
+    <updated>2024-01-22T02:32:23.000Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="数字类型"><a href="#数字类型" class="headerlink" title="数字类型"></a>数字类型</h1><h2 id="整形类型"><a href="#整形类型" class="headerlink" title="整形类型"></a>整形类型</h2><p>整形中分为<code>signed有符号(默认)</code>和<code>unsigned无符号</code>。</p><p><img src="/../img/posts/2024-01-22-MySQL%E5%AD%97%E6%AE%B5%E7%B1%BB%E5%9E%8B%E6%B3%A8%E6%84%8F%E7%82%B9/type-number.png" alt="type-number.png"></p><ul><li><p>一般情况下不建议设置为无符号，因为会导致一些问题</p><blockquote><p>例如：MySQL要求设置为<code>unsigned</code>的两个值相减的结果仍然为<code>unsigned</code>，否则会导致抛出<code>[22001][1690] Data truncation: BIGINT UNSIGNED value is out of range in &#39;xxx&#39;</code>异常。<br>如果确实要使用，可以通过设置<code>SET sql_mode=&#39;NO_UNSIGNED_SUBTRACTION&#39;;</code>来关闭这个检查。</p></blockquote></li><li><p>自增类型作为主键时，务必要使用<code>BIGINT</code>，而不是<code>INT</code></p><blockquote><p>因为<code>INT</code>最大值为<code>2147483647</code>，很容易达到上限，达到上限后再次插入会导致主键冲突。</p></blockquote></li><li><p>MySQL8.0之前，自增整型会有回溯问题</p><blockquote><p>当删除ID为4的记录后，如果MySQL服务器重启，那么下一个插入的ID依旧可能为4</p></blockquote></li></ul><h2 id="浮点类型和高精度类型"><a href="#浮点类型和高精度类型" class="headerlink" title="浮点类型和高精度类型"></a>浮点类型和高精度类型</h2><ul><li><p>浮点类型：<code>FLOAT</code>和<code>DOUBLE</code>在存储时会有精度问题，且在MySQL后续版本中可能会被废弃，建议使用高精度<code>DECIMAL</code>类型</p><blockquote><p><code>DECIMAL</code>类型在存储时通过<code>DECIMAL(precision,scale)</code>来设置其长度和小数点后的位数。</p></blockquote></li><li><p>涉及到金额的字段，建议使用<code>BIGINT</code>整型类型，而不是高精度<code>DECIMAL</code>类型</p><blockquote><p>使用<code>DECIMAL</code>类型时，其长度不好确定，导致存储空间碎片化，而使用整型，其长度统一，便于数据库整理。<br><img src="/../img/posts/2024-01-22-MySQL%E5%AD%97%E6%AE%B5%E7%B1%BB%E5%9E%8B%E6%B3%A8%E6%84%8F%E7%82%B9/%E5%AD%98%E5%82%A8%E7%A9%BA%E9%97%B4%E7%A2%8E%E7%89%87%E5%8C%96.png" alt="type-number.png"><br>同时，整型类型的计算速度更快。</p></blockquote></li></ul><h1 id="字符串类型"><a href="#字符串类型" class="headerlink" title="字符串类型"></a>字符串类型</h1><ul><li><p>一般情况下，建议使用<code>VARCHAR</code>类型，而不是<code>CHAR</code>类型，因为对于变长字符集utf8mb4来说，底层都是变长存储</p></li><li><p>默认情况下，<code>VARCHAR</code>类型可以设置在最大字符数为<code>65535/所选字符集下一个字符存储的字节数</code></p><blockquote><p>例如：当选用<code>utf8mb4</code>字符集时，一个字符使用4个字节存储，当设置的长度超过<code>65535/4=16383</code>时，会抛出<code>［42000]［1074］ Column length too big for column &#39;xxx&#39; (max=16383); use BLOB or TEXT instead.</code>异常。</p></blockquote></li><li><p>建议将字符集设置为<code>utf8mb4</code>，以支持emoji表情等特殊字符</p></li><li><p>排序规则一般选用大小写不敏感的<code>utf8mb4_0900_ai_ci</code></p><blockquote><p>ci：大小写不敏感(默认)<br>cs：大小写敏感<br>ai：重音不敏感<br>as：重音敏感<br>bin：二进制排序</p></blockquote></li><li><p>修改表和字段字符集的命令</p><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> `table_name` <span class="keyword">CONVERT</span> <span class="keyword">TO</span> <span class="type">CHARACTER</span> <span class="keyword">SET</span> utf8mb4 <span class="keyword">COLLATE</span> utf8mb4_0900_ai_ci;</span><br></pre></td></tr></table></figure></li><li><p>MySQL高版本中，性别字段建议使用<code>char(1)</code>类型，并通过check约束来限制其值</p><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CONSTRAINT</span> `user_chk_1` <span class="keyword">CHECK</span> (((`sex`<span class="operator">=</span>_utf8mb4<span class="string">&#x27;F&#x27;</span>) <span class="keyword">OR</span> (`sex`<span class="operator">=</span>_utf8mb4<span class="string">&#x27;M&#x27;</span>)))</span><br></pre></td></tr></table></figure></li><li><p>密码等隐私字段，建议通过<code>动态盐+动态加密算法</code>来加密存储</p></li></ul><h1 id="日期时间类型"><a href="#日期时间类型" class="headerlink" title="日期时间类型"></a>日期时间类型</h1><ul><li><p><code>TIMESTAMP</code>最大的优点是带有时区信息，如果业务需要不同国家的时间，建议使用<code>TIMESTAMP</code>类型</p></li><li><p><code>TIMESTAMP</code>类型存储上限为<code>2038-01-19 03:14:07</code>，需要注意潜在风险</p></li><li><p>使用<code>TIMESTAMP</code>类型时，建议显式设置时区，不要使用默认系统时区，会存在较大的性能问题</p><blockquote><p>推荐在配置文件中设置<code>time_zone=&#39;+8:00&#39;</code></p></blockquote></li><li><p>如无特殊需求，日期建议使用<code>DATETIME</code>类型，而不是<code>TIMESTAMP</code>和<code>INT</code>类型</p><blockquote><p>在使用时可以通过DATETIME(N)中的N来设置毫秒的精度，N的范围为0-6，默认为0<br>插入或更新时的默认时间可以通过<code>CURRENT_TIMESTAMP(N)</code>来设置<br><code>TIMESTAMP</code>如果设置毫秒数则占用7个字节，而<code>DATETIME</code>无论是否设置毫秒数都占用8个字节，所以在存储空间上几乎没有太大区别</p></blockquote></li></ul>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;h1 id=&quot;数字类型&quot;&gt;&lt;a href=&quot;#数字类型&quot; class=&quot;headerlink&quot; title=&quot;数字类型&quot;&gt;&lt;/a&gt;数字类型&lt;/h1&gt;&lt;h2 id=&quot;整形类型&quot;&gt;&lt;a href=&quot;#整形类型&quot; class=&quot;headerlink&quot; title=&quot;整形类型&quot;&gt;&lt;/a</summary>
+      
+    
+    
+    
+    <category term="MySQL" scheme="https://cloudbillow.cn/categories/MySQL/"/>
+    
+    
+    <category term="MySQL" scheme="https://cloudbillow.cn/tags/MySQL/"/>
+    
+  </entry>
+  
+  <entry>
     <title>自定义SpringBoot-Starter</title>
     <link href="https://cloudbillow.cn/2023/08/14/2023-08-14-%E8%87%AA%E5%AE%9A%E4%B9%89SpringBootStarter/"/>
     <id>https://cloudbillow.cn/2023/08/14/2023-08-14-%E8%87%AA%E5%AE%9A%E4%B9%89SpringBootStarter/</id>
