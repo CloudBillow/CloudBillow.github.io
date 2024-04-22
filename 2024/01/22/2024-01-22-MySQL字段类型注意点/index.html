@@ -240,7 +240,7 @@
 </li>
 <li><p>如无特殊需求，日期建议使用<code>DATETIME</code>类型，而不是<code>TIMESTAMP</code>和<code>INT</code>类型</p>
 <blockquote>
-<p>在使用时可以通过DATETIME(N)中的N来设置毫秒的精度，N的范围为0-6，默认为0<br>插入或更新时的默认时间可以通过<code>CURRENT_TIMESTAMP(N)</code>来设置<br><code>TIMESTAMP</code>如果设置毫秒数则占用7个字节，而<code>DATETIME</code>无论是否设置毫秒数都占用8个字节，所以在存储空间上几乎没有太大区别</p>
+<p>在使用时可以通过<code>DATETIME(N)</code>中的N来设置毫秒的精度，N的范围为0-6，默认为0<br>插入或更新时的默认时间可以通过<code>CURRENT_TIMESTAMP(N)</code>来设置<br><code>TIMESTAMP</code>如果设置毫秒数则占用7个字节，而<code>DATETIME</code>无论是否设置毫秒数都占用8个字节，所以在存储空间上几乎没有太大区别</p>
 </blockquote>
 </li>
 </ul>
